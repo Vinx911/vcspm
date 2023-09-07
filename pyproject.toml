@@ -1,0 +1,50 @@
+[project]
+name = "vcspm"
+requires-python = ">=3.7"
+description = "Vinx的C/C++源码包管理器"
+readme = "README.md"
+license = {text = "MPL-2.0 AND MIT"}
+authors = [
+    {name = "Vinx911", email = "Buddyhe911@163.com"},
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    'paramiko==3.3.1',
+    'py7zr==0.20.6',
+    'pyzstd==0.15.9',
+    'requests==2.31.0',
+    'urllib3==2.0.4',
+]
+keywords = ['vcspm', 'C++', 'package manager']
+dynamic = ["version"]
+
+[tool.setuptools]
+packages = ["vcspm"]
+
+[project.scripts]
+vcspm = "vcspm.vcspm:main"
+
+[project.urls]
+Homepage = "https://github.com/Vinx911/vcspm"
+Documentation = "https://github.com/Vinx911/vcspm"
+Source = "https://github.com/Vinx911/vcspm"
+Changelog = "https://github.com/Vinx911/vcspm"
+
+[build-system]
+requires = ["setuptools>=63", "build", "setuptools_scm[toml]>=7.0.5"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+write_to = "vcspm/version.py"
+write_to_template = """
+__version__ = \"{version}\"
+"""
+tag_regex = "^(?P<prefix>v)?(?P<version>[^\\+]+)(?P<suffix>.*)?$"
+
+[tool.check-manifest]
+ignore = ["vcspm/version.py"]

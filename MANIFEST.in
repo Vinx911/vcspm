@@ -1,0 +1,6 @@
+include *.md
+include *.toml
+include LICENSE
+recursive-include vcspm *.py
+prune .github
+exclude .gitignore

@@ -1,0 +1,85 @@
+{
+    "service_url": "包仓库地址url",
+    "install_dir": "包安装目录",
+    "packages": {
+        "包名-本地": {
+            "version": "版本号",
+            "type": "local",
+            "url": "本地文件-使用path将忽略url",
+            "path": "本地文件",
+            "include": [
+                "包含的文件",
+                ""
+            ],
+            "exclude": [
+                "排除的文件",
+                ""
+            ]
+        },
+        "包名-远程源文件": {
+            "version": "版本号",
+            "type": "sourcefile",
+            "url": "源文件url",
+            "sha1": "文件指纹"
+        },
+        "包名-远程压缩包": {
+            "version": "版本号",
+            "type": "archive",
+            "url": "压缩包url-可使用${version}指代版本号",
+            "rm_top_dir": "true-移除顶层目录",
+            "include": [
+                "包含的文件",
+                ""
+            ],
+            "exclude": [
+                "排除的文件",
+                ""
+            ]
+        },
+        "包名-git": {
+            "version": "版本号",
+            "type": "git",
+            "url": "git地址",
+            "git": "git地址",
+            "revision": "commit或者tag",
+            "include": [
+                "包含的文件",
+                ""
+            ],
+            "exclude": [
+                "排除的文件",
+                ""
+            ]
+        },
+        "包名-hg": {
+            "version": "版本号",
+            "type": "hg",
+            "url": "hg地址",
+            "hg": "hg地址",
+            "revision": "commit或者tag",
+            "include": [
+                "包含的文件",
+                ""
+            ],
+            "exclude": [
+                "排除的文件",
+                ""
+            ]
+        },
+        "包名-svn": {
+            "version": "版本号",
+            "type": "hg",
+            "url": "svn地址",
+            "svn": "svn地址",
+            "include": [
+                "包含的文件",
+                ""
+            ],
+            "exclude": [
+                "排除的文件",
+                ""
+            ]
+        },
+        "包名-包仓库中获取": "版本号"
+    }
+}
