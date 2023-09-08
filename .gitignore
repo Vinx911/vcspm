@@ -7,3 +7,5 @@
 /vcpm_packages.json
 vcspm/version.py
 
+/demos/.vcspm_packages.json
+/demos/vcspm_packages

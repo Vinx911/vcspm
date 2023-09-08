@@ -20,12 +20,15 @@
             "version": "版本号",
             "type": "sourcefile",
             "url": "源文件url",
-            "sha1": "文件指纹"
+            "hash_type": "hash类型-SHA1-SHA256",
+            "file_hash": "文件指纹"
         },
         "包名-远程压缩包": {
             "version": "版本号",
             "type": "archive",
             "url": "压缩包url-可使用${version}指代版本号",
+            "hash_type": "hash类型-SHA1-SHA256",
+            "file_hash": "文件指纹",
             "rm_top_dir": "true-移除顶层目录",
             "include": [
                 "包含的文件",

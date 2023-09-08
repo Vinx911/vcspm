@@ -132,7 +132,7 @@ def escapify_path(path):
 def copy_tree(src, dst, include=None, exclude=None):
     # 包含的文件
     include_files = set()
-    if include is not None:
+    if include is not None and len(include) > 0:
         for pat in include:
             for file in Path(src).rglob(pat):
                 include_files.add(file)
@@ -193,30 +193,30 @@ def writeJsonData(data, filename):
 
 # 列出全部包
 def list_packages(package_list):
-    for name in package_list.keys():
-        package = package_list.get(name)
+    for pkg_name in package_list.keys():
+        package = package_list.get(pkg_name)
         if type(package) is str:
-            version = package
-            print("{}/{}".format(name, version))
+            pkg_version = package
+            print("{}/{}".format(pkg_name, pkg_version))
         else:
-            version = package.get('version', None)
-            if version is None:
-                print("{}".format(name))
+            pkg_version = package.get('version', None)
+            if pkg_version is None:
+                print("{}".format(pkg_name))
             else:
-                print("{}/{}".format(name, version))
+                print("{}/{}".format(pkg_name, pkg_version))
 
 
 # 从仓库获取包信息
-def get_package_info_from_repository(service_url, name, version, patch_dir):
+def get_package_info_from_repository(service_url, pkg_name, pkg_version, patch_dir):
     """
     从远程仓库中获取包信息
     """
-    package_url = "{}/{}/{}/{}".format(service_url, name[0], name, version)
+    package_url = "{}/{}/{}/{}".format(service_url, pkg_name[0], pkg_name, pkg_version)
 
     info_url = "{}/{}".format(package_url, "vcspm.json")
     patch_url = "{}/{}".format(package_url, "patch.zip")
 
-    cache_path = os.path.join(CACHE_DIR, name[0], name, version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
     try:
         info_file = download_file(info_url, cache_path, force=False)
         # 读取依赖包文件
@@ -250,8 +250,20 @@ def download_progress(cur_size, total_size):
     print("%.2f" % (cur_size / 1024), "KB", end="\r")
 
 
+# 计算sha256值
+def compute_file_sha256(filename):
+    blocksize = 65536
+    hasher = hashlib.sha256()
+    with open(filename, 'rb') as afile:
+        buf = afile.read(blocksize)
+        while len(buf) > 0:
+            hasher.update(buf)
+            buf = afile.read(blocksize)
+    return hasher.hexdigest()
+
+
 # 计算sha1值
-def compute_file_hash(filename):
+def compute_file_sha1(filename):
     blocksize = 65536
     hasher = hashlib.sha1()
     with open(filename, 'rb') as afile:
@@ -260,6 +272,22 @@ def compute_file_hash(filename):
             hasher.update(buf)
             buf = afile.read(blocksize)
     return hasher.hexdigest()
+
+
+def check_hash(file_path, hash_type="SHA256", file_hash=None):
+    """
+    检查文件hash
+    """
+    if os.path.exists(file_path) and file_hash is not None and file_hash != "":
+        if hash_type == "SHA256":
+            hash_file = compute_file_sha256(file_path)
+            if hash_file != file_hash:
+                return False
+        elif hash_type == "SHA1":
+            hash_file = compute_file_sha1(file_path)
+            if hash_file != file_hash:
+                return False
+    return True
 
 
 def extract_file(filepath, target_dir):
@@ -342,12 +370,13 @@ def download_from_http(url, target_path, headers=None, chunk_size=8192):
                 download_progress(size, content_length)
 
 
-def download_file(url, local_path, sha1_hash=None, force=False):
+def download_file(url, local_path, hash_type="SHA256", file_hash=None, force=False):
     """
     分块下载大文件， 带进度条
     :param url: 下载的url
     :param local_path: 本地存储路径
-    :param sha1_hash: 文件的sha1
+    :param hash_type: 文件的hash类型
+    :param hash: 文件的hash
     :param force:是否覆盖本地已存在的文件
     :return:
     """
@@ -358,12 +387,10 @@ def download_file(url, local_path, sha1_hash=None, force=False):
     filename = os.path.basename(url)
     target_path = os.path.join(local_path, filename)
 
-    # 如果已经存在则检查SHA1是否匹配
-    if os.path.exists(target_path) and sha1_hash is not None and sha1_hash != "":
-        hash_file = compute_file_hash(target_path)
-        if hash_file != sha1_hash:
-            log_info("{} 文件的SHA1不匹配，将重新下载".format(target_path))
-            force = True
+    # 如果已经存在则检查HASH是否匹配
+    if not check_hash(target_path, hash_type, file_hash):
+        log_info("{} 文件的 {} 不匹配，将重新下载".format(target_path, hash_type))
+        force = True
 
     if (not os.path.exists(target_path)) or force:
         log_info("下载 " + url + " 到 " + target_path)
@@ -375,22 +402,20 @@ def download_file(url, local_path, sha1_hash=None, force=False):
     else:
         log_info("已经下载，跳过下载 {}".format(url))
 
-    # 检查 SHA1
-    if sha1_hash is not None and sha1_hash != "":
-        hash_file = compute_file_hash(target_path)
-        if hash_file != sha1_hash:
-            errorStr = "下载的文件SHA1不匹配: {}({})".format(target_path, hash_file)
-            log_info(errorStr)
-            raise RuntimeError(errorStr)
+    # 检查下载文件的HASH
+    if not check_hash(target_path, hash_type, file_hash):
+        errorStr = "下载的文件 {} 不匹配: {}({})".format(hash_type, target_path, file_hash)
+        log_info(errorStr)
+        raise RuntimeError(errorStr)
 
     return target_path
 
 
-def clone_git_repository(url, name, revision, local_path):
+def clone_git_repository(url, pkg_name, revision, local_path):
     """
     从git仓库下载包
     """
-    target_path = escapify_path(os.path.join(local_path, name))
+    target_path = escapify_path(os.path.join(local_path, pkg_name))
     target_exists = os.path.exists(target_path)
     log_info("克隆 {} 到 {}".format(url, target_path))
 
@@ -413,11 +438,11 @@ def clone_git_repository(url, name, revision, local_path):
     return target_path
 
 
-def clone_hg_repository(url, name, revision, local_path):
+def clone_hg_repository(url, pkg_name, revision, local_path):
     """
     从hg仓库下载包
     """
-    target_path = escapify_path(os.path.join(local_path, name))
+    target_path = escapify_path(os.path.join(local_path, pkg_name))
     target_exists = os.path.exists(target_path)
     log_info("克隆 {} 到 {}".format(url, target_path))
 
@@ -440,11 +465,11 @@ def clone_hg_repository(url, name, revision, local_path):
     return target_path
 
 
-def clone_svn_repository(url, name, local_path):
+def clone_svn_repository(url, pkg_name, local_path):
     """
     从svn仓库下载包
     """
-    target_path = escapify_path(os.path.join(local_path, name))
+    target_path = escapify_path(os.path.join(local_path, pkg_name))
     target_exists = os.path.exists(target_path)
     log_info("克隆 {} 到 {}".format(url, target_path))
 
@@ -472,38 +497,50 @@ def extract_file_and_filter(filename, package_path, rm_top_dir=False, include=No
 
 
 def download_package_from_local(package, package_path, force=False):
-    name = package['name']
-    url = package['info'].get('url', None)
-    path = package['info'].get('path', None)
-    include = package['info'].get('include', None)
-    exclude = package['info'].get('exclude', None)
-    path = path or url
+    pkg_name = package['name']
+    pkg_url = package['info'].get('url', None)
+    pkg_path = package['info'].get('path', None)
+    pkg_include = package['info'].get('include', None)
+    pkg_exclude = package['info'].get('exclude', None)
+    pkg_path = pkg_path or pkg_url
 
     if force:
         shutil.rmtree(package_path)
         os.makedirs(package_path)
 
-    if path is None:
-        err_msg = "本地包 {} 的 path 为空".format(name)
+    if pkg_path is None:
+        err_msg = "本地包 {} 的 path 为空".format(pkg_name)
         raise RuntimeError(err_msg)
 
-    copy_tree(path, package_path, include=include, exclude=exclude)
+    copy_tree(pkg_path, package_path, include=pkg_include, exclude=pkg_exclude)
 
 
 def download_package_from_source_file(package, package_path, force=False):
-    name = package['name']
-    url = package['info'].get('url', None)
-    sha1 = package['info'].get('sha1', None)
-    version = package['info'].get('version', '')
+    pkg_name = package['name']
+    pkg_url = package['info'].get('url', None)
+    pkg_hash_type = package['info'].get('hash_type', None)
+    pkg_file_hash = package['info'].get('file_hash', None)
+    pkg_version = package['info'].get('version', '')
 
     if force:
         shutil.rmtree(package_path)
         os.makedirs(package_path)
 
-    cache_path = os.path.join(CACHE_DIR, name[0], name, version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
     try:
-        cache_file = download_file(url, cache_path, sha1_hash=sha1, force=force)
-        filename = os.path.basename(url)
+        cache_file = None
+        if type(pkg_url) is list:
+            for url in pkg_url:
+                try:
+                    cache_file = download_file(url, cache_path, pkg_hash_type, pkg_file_hash, force=force)
+                    break
+                except Exception as e:
+                    log_info(str(e))
+                    continue
+        else:
+            cache_file = download_file(pkg_url, cache_path, pkg_hash_type, pkg_file_hash, force=force)
+
+        filename = os.path.basename(pkg_url)
         shutil.copyfile(cache_file, os.path.join(package_path, filename))
     except:
         shutil.rmtree(package_path)
@@ -511,68 +548,69 @@ def download_package_from_source_file(package, package_path, force=False):
 
 
 def download_package_from_archive(package, package_path, force=False):
-    name = package['name']
-    url = package['info'].get('url', None)
-    sha1 = package['info'].get('sha1', None)
-    version = package['info'].get('version', '')
-    include = package['info'].get('include', None)
-    exclude = package['info'].get('exclude', None)
-    rm_top_dir = package['info'].get('rm_top_dir', False)
+    pkg_name = package['name']
+    pkg_url = package['info'].get('url', None)
+    pkg_hash_type = package['info'].get('hash_type', None)
+    pkg_file_hash = package['info'].get('file_hash', None)
+    pkg_version = package['info'].get('version', '')
+    pkg_include = package['info'].get('include', None)
+    pkg_exclude = package['info'].get('exclude', None)
+    pkg_rm_top_dir = package['info'].get('rm_top_dir', False)
 
     if force:
         shutil.rmtree(package_path)
         os.makedirs(package_path)
 
-    cache_path = os.path.join(CACHE_DIR, name[0], name, version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
 
     cache_file = None
-    if type(url) is list:
-        for u in url:
+    if type(pkg_url) is list:
+        for url in pkg_url:
             try:
-                u = u.replace("${version}", version)
-                cache_file = download_file(u, cache_path, sha1_hash=sha1, force=force)
+                url = url.replace("${version}", pkg_version)
+                cache_file = download_file(url, cache_path, pkg_hash_type, pkg_file_hash, force=force)
                 break
             except Exception as e:
                 log_info(str(e))
                 continue
     else:
-        u = url.replace("${version}", version)
-        cache_file = download_file(u, cache_path, sha1_hash=sha1, force=force)
+        url = pkg_url.replace("${version}", pkg_version)
+        cache_file = download_file(url, cache_path, pkg_hash_type, pkg_file_hash, force=force)
 
     if cache_file is None:
-        if type(url) is list:
-            u = [u.replace("${version}", version) for u in url]
-            err_msg = "下载文件失败: {}".format(u)
+        if type(pkg_url) is list:
+            url = [url.replace("${version}", pkg_version) for url in pkg_url]
+            err_msg = "下载文件失败: {}".format(url)
         else:
-            u = url.replace("${version}", version)
-            err_msg = "下载文件失败: {}".format(u)
+            url = pkg_url.replace("${version}", pkg_version)
+            err_msg = "下载文件失败: {}".format(url)
         raise RuntimeError(err_msg)
 
-    extract_file_and_filter(cache_file, package_path, rm_top_dir, include=include, exclude=exclude)
+    extract_file_and_filter(cache_file, package_path, pkg_rm_top_dir, include=pkg_include, exclude=pkg_exclude)
 
 
 def download_package_from_git(package, package_path, force=False):
-    name = package['name']
-    url = package['info'].get('url', None)
-    git_url = package['info'].get('git', None)
-    version = package['info'].get('version', '')
-    include = package['info'].get('include', None)
-    exclude = package['info'].get('exclude', None)
-    revision = package['info'].get('revision', None)
-    git_url = git_url or url
+    pkg_name = package['name']
+    pkg_url = package['info'].get('url', None)
+    pkg_git_url = package['info'].get('git', None)
+    pkg_version = package['info'].get('version', '')
+    pkg_include = package['info'].get('include', None)
+    pkg_exclude = package['info'].get('exclude', None)
+    pkg_revision = package['info'].get('revision', None)
+    pkg_git_url = pkg_git_url or pkg_url
 
-    if git_url is None:
+    if pkg_git_url is None:
         raise
 
     shutil.rmtree(package_path, onerror=delete)
     os.makedirs(package_path)
 
-    cache_path = os.path.join(CACHE_DIR, name[0], name, version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
 
     # 克隆后压缩缓存
-    archive_name = name + ".tar.gz"
-    if revision is not None:
-        archive_name = name + "_" + revision + ".tar.gz"
+    archive_name = pkg_name + ".tar.gz"
+    if pkg_revision is not None:
+        archive_name = pkg_name + "_" + pkg_revision + ".tar.gz"
     archive_sha1 = archive_name + ".sha1"
     archive_path = os.path.join(cache_path, archive_name)
     archive_sha1_path = os.path.join(cache_path, archive_sha1)
@@ -580,43 +618,43 @@ def download_package_from_git(package, package_path, force=False):
     # 如果已经存在则检查SHA1是否匹配
     if (not force) and os.path.exists(archive_path) and os.path.exists(archive_sha1_path):
         sha1_hash = open(archive_sha1_path).read()
-        hash_file = compute_file_hash(archive_path)
+        hash_file = compute_file_sha256(archive_path)
         if hash_file == sha1_hash:
-            log_info("包 {} 已经下载，将使用缓存文件".format(name))
-            extract_file_and_filter(archive_path, package_path, include=include, exclude=exclude)
+            log_info("包 {} 已经下载，将使用缓存文件".format(pkg_name))
+            extract_file_and_filter(archive_path, package_path, include=pkg_include, exclude=pkg_exclude)
             return
 
-    repo_path = clone_git_repository(git_url, name, revision, cache_path)
-    copy_tree(repo_path, package_path, include=include, exclude=exclude)
-    create_archive_from_directory(repo_path, archive_path, revision is None)
-    hash_file = compute_file_hash(archive_path)
+    repo_path = clone_git_repository(pkg_git_url, pkg_name, pkg_revision, cache_path)
+    copy_tree(repo_path, package_path, include=pkg_include, exclude=pkg_exclude)
+    create_archive_from_directory(repo_path, archive_path, pkg_revision is None)
+    hash_file = compute_file_sha256(archive_path)
     with open(archive_sha1_path, 'w') as f:
         f.write(hash_file)
     shutil.rmtree(repo_path, onerror=delete)
 
 
 def download_package_from_hg(package, package_path, force=False):
-    name = package['name']
-    url = package['info'].get('url', None)
-    hg_url = package['info'].get('hg', None)
-    version = package['info'].get('version', '')
-    include = package['info'].get('include', None)
-    exclude = package['info'].get('exclude', None)
-    revision = package['info'].get('revision', None)
-    hg_url = hg_url or url
+    pkg_name = package['name']
+    pkg_url = package['info'].get('url', None)
+    pkg_hg_url = package['info'].get('hg', None)
+    pkg_version = package['info'].get('version', '')
+    pkg_revision = package['info'].get('revision', None)
+    pkg_include = package['info'].get('include', None)
+    pkg_exclude = package['info'].get('exclude', None)
+    pkg_hg_url = pkg_hg_url or pkg_url
 
-    if hg_url is None:
+    if pkg_hg_url is None:
         raise
 
     shutil.rmtree(package_path, onerror=delete)
     os.makedirs(package_path)
 
-    cache_path = os.path.join(CACHE_DIR, name[0], name, version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
 
     # 克隆后压缩缓存
-    archive_name = name + ".tar.gz"
-    if revision is not None:
-        archive_name = name + "_" + revision + ".tar.gz"
+    archive_name = pkg_name + ".tar.gz"
+    if pkg_revision is not None:
+        archive_name = pkg_name + "_" + pkg_revision + ".tar.gz"
     archive_sha1 = archive_name + ".sha1"
     archive_path = os.path.join(cache_path, archive_name)
     archive_sha1_path = os.path.join(cache_path, archive_sha1)
@@ -624,40 +662,40 @@ def download_package_from_hg(package, package_path, force=False):
     # 如果已经存在则检查SHA1是否匹配
     if (not force) and os.path.exists(archive_path) and os.path.exists(archive_sha1_path):
         sha1_hash = open(archive_sha1_path).read()
-        hash_file = compute_file_hash(archive_path)
+        hash_file = compute_file_sha256(archive_path)
         if hash_file == sha1_hash:
-            log_info("包 {} 已经下载，将使用缓存的包。".format(name))
-            extract_file_and_filter(archive_path, package_path, include=include, exclude=exclude)
+            log_info("包 {} 已经下载，将使用缓存的包。".format(pkg_name))
+            extract_file_and_filter(archive_path, package_path, include=pkg_include, exclude=pkg_exclude)
             return
 
-    repo_path = clone_hg_repository(hg_url, name, revision, cache_path)
-    copy_tree(repo_path, package_path, include=include, exclude=exclude)
-    create_archive_from_directory(repo_path, archive_path, revision is None)
-    hash_file = compute_file_hash(archive_path)
+    repo_path = clone_hg_repository(pkg_hg_url, pkg_name, pkg_revision, cache_path)
+    copy_tree(repo_path, package_path, include=pkg_include, exclude=pkg_exclude)
+    create_archive_from_directory(repo_path, archive_path, pkg_revision is None)
+    hash_file = compute_file_sha256(archive_path)
     with open(archive_sha1_path, 'w') as f:
         f.write(hash_file)
     shutil.rmtree(repo_path, onerror=delete)
 
 
 def download_package_from_svn(package, package_path, force=False):
-    name = package['name']
-    url = package['info'].get('url', None)
-    svn_url = package['info'].get('svn', None)
-    version = package['info'].get('version', '')
-    include = package['info'].get('include', None)
-    exclude = package['info'].get('exclude', None)
-    svn_url = svn_url or url
+    pkg_name = package['name']
+    pkg_url = package['info'].get('url', None)
+    pkg_svn_url = package['info'].get('svn', None)
+    pkg_version = package['info'].get('version', '')
+    pkg_include = package['info'].get('include', None)
+    pkg_exclude = package['info'].get('exclude', None)
+    pkg_svn_url = pkg_svn_url or pkg_url
 
-    if svn_url is None:
+    if pkg_svn_url is None:
         raise
 
     shutil.rmtree(package_path, onerror=delete)
     os.makedirs(package_path)
 
-    cache_path = os.path.join(CACHE_DIR, name[0], name, version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
 
     # 克隆后压缩缓存
-    archive_name = name + ".tar.gz"
+    archive_name = pkg_name + ".tar.gz"
     archive_sha1 = archive_name + ".sha1"
     archive_path = os.path.join(cache_path, archive_name)
     archive_sha1_path = os.path.join(cache_path, archive_sha1)
@@ -665,16 +703,16 @@ def download_package_from_svn(package, package_path, force=False):
     # 如果已经存在则检查SHA1是否匹配
     if (not force) and os.path.exists(archive_path) and os.path.exists(archive_sha1_path):
         sha1_hash = open(archive_sha1_path).read()
-        hash_file = compute_file_hash(archive_path)
+        hash_file = compute_file_sha256(archive_path)
         if hash_file == sha1_hash:
-            log_info("包 {} 已经下载，将使用缓存的包。".format(name))
-            extract_file_and_filter(archive_path, package_path, include=include, exclude=exclude)
+            log_info("包 {} 已经下载，将使用缓存的包。".format(pkg_name))
+            extract_file_and_filter(archive_path, package_path, include=pkg_include, exclude=pkg_exclude)
             return
 
-    repo_path = clone_svn_repository(svn_url, name, cache_path)
-    copy_tree(repo_path, package_path, include=include, exclude=exclude)
+    repo_path = clone_svn_repository(pkg_svn_url, pkg_name, cache_path)
+    copy_tree(repo_path, package_path, include=pkg_include, exclude=pkg_exclude)
     create_archive_from_directory(repo_path, archive_path, True)
-    hash_file = compute_file_hash(archive_path)
+    hash_file = compute_file_sha256(archive_path)
     with open(archive_sha1_path, 'w') as f:
         f.write(hash_file)
     shutil.rmtree(repo_path, onerror=delete)
@@ -701,15 +739,15 @@ def run_python_script(script_path):
     die_if_non_zero(exec_shell(SHELL_PYTHON + " " + escapify_path(script_path), False))
 
 
-def post_process(name, package_dir, patches_dir, post):
+def post_process(pkg_name, package_dir, patches_dir, post):
     if post is None:
         return 0
 
     if 'type' not in post:
-        log_error("无效的格式 {}, 'post_process'必须包含 'type' ".format(name))
+        log_error("无效的格式 {}, 'post_process'必须包含 'type' ".format(pkg_name))
         return -1
     if 'file' not in post:
-        log_error("无效的格式 {}, 'post_process'必须包含 'file' ".format(name))
+        log_error("无效的格式 {}, 'post_process'必须包含 'file' ".format(pkg_name))
         return -1
 
     post_type = post['type']
@@ -722,7 +760,7 @@ def post_process(name, package_dir, patches_dir, post):
         script_path = os.path.join(patches_dir, post_file)
         run_python_script(script_path)
     else:
-        log_error("{} 未知的 post_process 类型 {}".format(name, post_type))
+        log_error("{} 未知的 post_process 类型 {}".format(pkg_name, post_type))
         return -1
 
 
@@ -898,28 +936,28 @@ def main(argv=None):
             shutil.rmtree(os.path.join(install_path, pkg_name), onerror=delete)
 
     failed_packages = []  # 失败的包
-    for name in pkg_names:
-        info = package_list.get(name)
+    for pkg_name in pkg_names:
+        info = package_list.get(pkg_name)
 
         # 跳过--skip指定的包
-        if args.skip and (name in args.skip):
+        if args.skip and (pkg_name in args.skip):
             continue
 
         # 不是--require指定的包
-        if args.require and (name not in args.require):
+        if args.require and (pkg_name not in args.require):
             continue
 
-        package_dir = os.path.join(install_path, name)
+        package_dir = os.path.join(install_path, pkg_name)
         package_dir = package_dir.replace(os.path.sep, '/')
-        patch_dir = os.path.join(patches_dir, name)
+        patch_dir = os.path.join(patches_dir, pkg_name)
         patch_dir = patch_dir.replace(os.path.sep, '/')
 
-        log_debug("********** PACKAGE " + name + " **********")
+        log_debug("********** PACKAGE " + pkg_name + " **********")
         log_debug("package_dir = " + package_dir + ")")
 
         # 检查包是否已经缓存
         cached_state = False
-        if (name not in args.clean) and (not args.clean_all):
+        if (pkg_name not in args.clean) and (not args.clean_all):
             for sname in state_package_list.keys():
                 sinfo = state_package_list.get(sname)
                 if sinfo == info:
@@ -927,17 +965,17 @@ def main(argv=None):
                     break
 
         if cached_state:
-            log_info("跳过已经缓存的包：{}".format(name))
+            log_info("跳过已经缓存的包：{}".format(pkg_name))
             continue
         else:
             # 删除缓存的包信息
-            if name in state_package_list.keys():
-                state_package_list.pop(name)
+            if pkg_name in state_package_list.keys():
+                state_package_list.pop(pkg_name)
 
         # 清除包目录
         clean_package = False
-        if args.clean_all or (name in args.clean):
-            log_info("清除包 {} 目录".format(name))
+        if args.clean_all or (pkg_name in args.clean):
+            log_info("清除包 {} 目录".format(pkg_name))
             clean_package = True
             if os.path.exists(package_dir):
                 shutil.rmtree(package_dir, onerror=delete)
@@ -948,20 +986,20 @@ def main(argv=None):
 
         try:
             if type(info) is str:  # 使用仓库
-                version = info
-                info = get_package_info_from_repository(service_url, name, version, patch_dir)
+                pkg_version = info
+                info = get_package_info_from_repository(service_url, pkg_name, pkg_version, patch_dir)
                 if info is None:
-                    err_msg = "无法获取包 {} 信息".format(name)
+                    err_msg = "无法获取包 {} 信息".format(pkg_name)
                     log_error(err_msg)
                     raise RuntimeError(err_msg)
 
             if 'type' not in info:
-                err_msg = "未指定包 {} 的类型".format(name)
+                err_msg = "未指定包 {} 的类型".format(pkg_name)
                 log_error(err_msg)
                 raise RuntimeError(err_msg)
 
             package_type = info['type']
-            package = {'name': name, 'info': info}
+            package = {'name': pkg_name, 'info': info}
             if package_type == "local":
                 download_package_from_local(package, package_dir, clean_package)
             elif package_type == "sourcefile":
@@ -979,18 +1017,18 @@ def main(argv=None):
 
             # 更新后需要执行的任务
             post = info.get('post_process', None)
-            post_process(name, package_dir, patch_dir, post)
+            post_process(pkg_name, package_dir, patch_dir, post)
 
             # 更新状态文件
-            state_package_list[name] = info
+            state_package_list[pkg_name] = info
             writeJsonData(vcspm_state, state_filepath)
         except:
-            log_error("更新包 {} 失败，(reason: {})".format(name, sys.exc_info()[0]))
+            log_error("更新包 {} 失败，(reason: {})".format(pkg_name, sys.exc_info()[0]))
             shutil.rmtree(package_dir, onerror=delete)
             if args.break_on_error:
                 exit(-1)
             traceback.print_exc()
-            failed_packages.append(name)
+            failed_packages.append(pkg_name)
 
     if failed_packages:
         log_info("***************************************")
