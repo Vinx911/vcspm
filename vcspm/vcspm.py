@@ -98,11 +98,12 @@ def delete(func, path, execinfo):
 # 执行命令
 def exec_shell(command, print_command=False, quiet=False):
     print_command = print_command or debug_output
+
     out = None
     err = None
 
     if quiet:
-        out = open(os.devnull, 'w')
+        out = subprocess.DEVNULL
         err = subprocess.STDOUT
 
     if print_command:
@@ -611,7 +612,7 @@ def download_package_from_git(package, package_path, force=False):
     archive_name = pkg_name + ".tar.gz"
     if pkg_revision is not None:
         archive_name = pkg_name + "_" + pkg_revision + ".tar.gz"
-    archive_sha1 = archive_name + ".sha1"
+    archive_sha1 = archive_name + ".sha256"
     archive_path = os.path.join(cache_path, archive_name)
     archive_sha1_path = os.path.join(cache_path, archive_sha1)
 
@@ -655,7 +656,7 @@ def download_package_from_hg(package, package_path, force=False):
     archive_name = pkg_name + ".tar.gz"
     if pkg_revision is not None:
         archive_name = pkg_name + "_" + pkg_revision + ".tar.gz"
-    archive_sha1 = archive_name + ".sha1"
+    archive_sha1 = archive_name + ".sha256"
     archive_path = os.path.join(cache_path, archive_name)
     archive_sha1_path = os.path.join(cache_path, archive_sha1)
 
@@ -696,7 +697,7 @@ def download_package_from_svn(package, package_path, force=False):
 
     # 克隆后压缩缓存
     archive_name = pkg_name + ".tar.gz"
-    archive_sha1 = archive_name + ".sha1"
+    archive_sha1 = archive_name + ".sha256"
     archive_path = os.path.join(cache_path, archive_name)
     archive_sha1_path = os.path.join(cache_path, archive_sha1)
 
@@ -734,9 +735,9 @@ def apply_patch_file(patch_path, src_path, pnum):
         die_if_non_zero(exec_shell(SHELL_PATCH + " " + arguments, quiet=True))
 
 
-def run_python_script(script_path):
+def run_python_script(script_path, args=""):
     log_info("运行 Python 脚本 " + script_path)
-    die_if_non_zero(exec_shell(SHELL_PYTHON + " " + escapify_path(script_path), False))
+    die_if_non_zero(exec_shell(SHELL_PYTHON + " " + escapify_path(script_path) + " " + args, False))
 
 
 def post_process(pkg_name, package_dir, patches_dir, post):
@@ -758,7 +759,7 @@ def post_process(pkg_name, package_dir, patches_dir, post):
         apply_patch_file(patch_path, package_dir, post.get('pnum', DEFAULT_PNUM))
     elif post_type == "script":
         script_path = os.path.join(patches_dir, post_file)
-        run_python_script(script_path)
+        run_python_script(script_path, pkg_name + " \"" + package_dir + "\"")
     else:
         log_error("{} 未知的 post_process 类型 {}".format(pkg_name, post_type))
         return -1

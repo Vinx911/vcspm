@@ -1,0 +1,9 @@
+diff -rupN package-1.0.0/README.txt package-1.0.1/README.txt
+--- package-1.0.0/README.txt	2023-09-08 13:24:09.153054000 +0800
++++ package-1.0.1/README.txt	2023-09-08 13:39:11.987988900 +0800
+@@ -1 +1,2 @@
+-这是一个测试软件包
+\ No newline at end of file
++这是一个测试软件包
++这是一条通过补丁添加的文本
+\ No newline at end of file

@@ -9,6 +9,29 @@
             "include": [],
             "exclude": []
         },
+        "test-script": {
+            "version": "1.0.0",
+            "type": "local",
+            "path": "D:/package-1.0.0",
+            "include": [],
+            "exclude": [],
+            "post_process": {
+                "type": "script",
+                "file": "test.py"
+            }
+        },
+        "test-patch": {
+            "version": "1.0.0",
+            "type": "local",
+            "path": "D:/package-1.0.0",
+            "include": [],
+            "exclude": [],
+            "post_process": {
+                "type": "patch",
+                "file": "README.patch",
+                "pnum": 1
+            }
+        },
         "c_hashmap": {
             "version": "1.0.0",
             "type": "sourcefile",

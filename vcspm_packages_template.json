@@ -14,14 +14,19 @@
             "exclude": [
                 "排除的文件",
                 ""
-            ]
+            ],
+            "post_process": {
+                "type": "script/patch",
+                "file": "脚本文件或者补丁文件",
+                "pnum": 1
+            }
         },
         "包名-远程源文件": {
             "version": "版本号",
             "type": "sourcefile",
             "url": "源文件url",
             "hash_type": "hash类型-SHA1-SHA256",
-            "file_hash": "文件指纹"
+            "file_hash": "文件指纹",
         },
         "包名-远程压缩包": {
             "version": "版本号",
