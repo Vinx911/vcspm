@@ -238,9 +238,13 @@ def get_package_info_from_repository(service_url, pkg_name, pkg_version, patch_d
 
 # #下载进度条
 def download_progress(cur_size, total_size):
-    percent = int((cur_size / total_size) * 100)
-    percent = percent if percent <= 100 else 100
-    percent = percent if percent >= 0 else 0
+    try:
+        percent = int((cur_size / total_size) * 100)
+        percent = percent if percent <= 100 else 100
+        percent = percent if percent >= 0 else 0
+    except:
+        percent = 100
+        
     print("[", end="")
     for i in range(int(percent / 2)):
         print("*", end="")
@@ -252,25 +256,25 @@ def download_progress(cur_size, total_size):
 
 # 计算sha256值
 def compute_file_sha256(filename):
-    blocksize = 65536
+    block_size = 65536
     hasher = hashlib.sha256()
-    with open(filename, 'rb') as afile:
-        buf = afile.read(blocksize)
+    with open(filename, 'rb') as f:
+        buf = f.read(block_size)
         while len(buf) > 0:
             hasher.update(buf)
-            buf = afile.read(blocksize)
+            buf = f.read(block_size)
     return hasher.hexdigest()
 
 
 # 计算sha1值
 def compute_file_sha1(filename):
-    blocksize = 65536
+    block_size = 65536
     hasher = hashlib.sha1()
-    with open(filename, 'rb') as afile:
-        buf = afile.read(blocksize)
+    with open(filename, 'rb') as f:
+        buf = f.read(block_size)
         while len(buf) > 0:
             hasher.update(buf)
-            buf = afile.read(blocksize)
+            buf = f.read(block_size)
     return hasher.hexdigest()
 
 
@@ -368,6 +372,7 @@ def download_from_http(url, target_path, headers=None, chunk_size=8192):
                 f.write(chunk)
                 size += len(chunk)
                 download_progress(size, content_length)
+            print()
 
 
 def download_file(url, local_path, hash_type="SHA256", file_hash=None, force=False):
@@ -376,7 +381,7 @@ def download_file(url, local_path, hash_type="SHA256", file_hash=None, force=Fal
     :param url: 下载的url
     :param local_path: 本地存储路径
     :param hash_type: 文件的hash类型
-    :param hash: 文件的hash
+    :param file_hash: 文件的hash
     :param force:是否覆盖本地已存在的文件
     :return:
     """
