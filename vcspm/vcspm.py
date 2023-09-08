@@ -35,14 +35,13 @@ from urllib.parse import urlparse
 import paramiko
 import requests
 import scp
-import decompress
-import version
+from vcspm import decompress, version
 
 VCSPM_DIR = ".vcspm"
 CACHE_DIR_NAME = ".vcspm"
-INSTALL_DIR = "vcspm_packages"
-PATCHES_DIR = "vcspm_patches"
-VCSPM_FILE = "vcspm_packages.json"
+INSTALL_DIR = "vcspm/packages"
+PATCHES_DIR = "vcspm/patches"
+VCSPM_FILE = "vcspm.json"
 
 ROOT_DIR = os.getcwd()
 HOME_DIR = Path.home()
@@ -212,12 +211,12 @@ def get_package_info_from_repository(service_url, pkg_name, pkg_version, patch_d
     """
     从远程仓库中获取包信息
     """
-    package_url = "{}/{}/{}/{}".format(service_url, pkg_name[0], pkg_name, pkg_version)
+    package_url = "{}/{}/{}/{}".format(service_url, pkg_name[0].lower(), pkg_name, pkg_version)
 
     info_url = "{}/{}".format(package_url, "vcspm.json")
     patch_url = "{}/{}".format(package_url, "patch.zip")
 
-    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0].lower(), pkg_name, pkg_version)
     try:
         info_file = download_file(info_url, cache_path, force=False)
         # 读取依赖包文件
@@ -527,7 +526,7 @@ def download_package_from_source_file(package, package_path, force=False):
         shutil.rmtree(package_path)
         os.makedirs(package_path)
 
-    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0].lower(), pkg_name, pkg_version)
     try:
         cache_file = None
         if type(pkg_url) is list:
@@ -562,7 +561,7 @@ def download_package_from_archive(package, package_path, force=False):
         shutil.rmtree(package_path)
         os.makedirs(package_path)
 
-    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0].lower(), pkg_name, pkg_version)
 
     cache_file = None
     if type(pkg_url) is list:
@@ -606,7 +605,7 @@ def download_package_from_git(package, package_path, force=False):
     shutil.rmtree(package_path, onerror=delete)
     os.makedirs(package_path)
 
-    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0].lower(), pkg_name, pkg_version)
 
     # 克隆后压缩缓存
     archive_name = pkg_name + ".tar.gz"
@@ -650,7 +649,7 @@ def download_package_from_hg(package, package_path, force=False):
     shutil.rmtree(package_path, onerror=delete)
     os.makedirs(package_path)
 
-    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0].lower(), pkg_name, pkg_version)
 
     # 克隆后压缩缓存
     archive_name = pkg_name + ".tar.gz"
@@ -693,7 +692,7 @@ def download_package_from_svn(package, package_path, force=False):
     shutil.rmtree(package_path, onerror=delete)
     os.makedirs(package_path)
 
-    cache_path = os.path.join(CACHE_DIR, pkg_name[0], pkg_name, pkg_version)
+    cache_path = os.path.join(CACHE_DIR, pkg_name[0].lower(), pkg_name, pkg_version)
 
     # 克隆后压缩缓存
     archive_name = pkg_name + ".tar.gz"
@@ -767,7 +766,7 @@ def post_process(pkg_name, package_dir, patches_dir, post):
 
 # 解析命令行参数
 def parser_argument(argv=None):
-    parser = argparse.ArgumentParser(description='vcspm.py v%s - Vinx C++ Package Manager.' % version.__version__,
+    parser = argparse.ArgumentParser(description='vcspm.py v%s - C++ Package Manager.' % version.__version__,
                                      formatter_class=HelpFormatter)
 
     parser.add_argument(

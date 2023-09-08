@@ -26,7 +26,7 @@
             "type": "sourcefile",
             "url": "源文件url",
             "hash_type": "hash类型-SHA1-SHA256",
-            "file_hash": "文件指纹",
+            "file_hash": "文件指纹"
         },
         "包名-远程压缩包": {
             "version": "版本号",

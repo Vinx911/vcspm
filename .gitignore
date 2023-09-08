@@ -1,11 +1,8 @@
 /.idea
-/.vcpm_packages.json
 **/__pycache__
 /build
-/vcpm_packages
 /vcspm.egg-info
-/vcpm_packages.json
 vcspm/version.py
 
-/demos/.vcspm_packages.json
-/demos/vcspm_packages
+/example/vcspm_packages
+/example/.vcspm.json

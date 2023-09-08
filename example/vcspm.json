@@ -1,6 +1,6 @@
 {
     "service_url": "https://vinshell.com",
-    "install_dir": "vcspm_packages",
+    "install_dir": "vcspm/packages",
     "packages": {
         "package": {
             "version": "1.0.0",
