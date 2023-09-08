@@ -193,4 +193,6 @@
 | --debug           |    | 输出调试信息   |
 | --break-on-error  |    | 出现错误立即中断获取 |
 
-## 
+## 参考项目
+[Calbabreaker/yacpm](https://github.com/Calbabreaker/yacpm)
+[corporateshark/bootstrapping](https://github.com/corporateshark/bootstrapping)

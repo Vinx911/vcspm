@@ -244,7 +244,7 @@ def download_progress(cur_size, total_size):
         percent = percent if percent >= 0 else 0
     except:
         percent = 100
-        
+
     print("[", end="")
     for i in range(int(percent / 2)):
         print("*", end="")
