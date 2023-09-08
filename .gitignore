@@ -1,6 +1,6 @@
 /.idea
 /.vcpm_packages.json
-/__pycache__
+**/__pycache__
 /build
 /vcpm_packages
 /vcspm.egg-info

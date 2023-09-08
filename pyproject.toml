@@ -3,13 +3,13 @@ name = "vcspm"
 requires-python = ">=3.7"
 description = "Vinx的C/C++源码包管理器"
 readme = "README.md"
-license = {text = "MPL-2.0 AND MIT"}
+license = {text = "LGPL-2.1-or-later"}
 authors = [
     {name = "Vinx911", email = "Buddyhe911@163.com"},
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
     "Operating System :: OS Independent",
 ]
 dependencies = [
@@ -18,6 +18,7 @@ dependencies = [
     'pyzstd==0.15.9',
     'requests==2.31.0',
     'urllib3==2.0.4',
+    'scp==0.14.5',
 ]
 keywords = ['vcspm', 'C++', 'package manager']
 dynamic = ["version"]

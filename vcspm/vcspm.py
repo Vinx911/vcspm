@@ -1,4 +1,22 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
+#
+#    Vinx C/C++ Source Package Manager
+#    Copyright (C) 2023 Vinx911 <Buddyhe911@163.com>
+#
+#    This library is free software; you can redistribute it and/or
+#    modify it under the terms of the GNU Lesser General Public
+#    License as published by the Free Software Foundation; either
+#    version 2.1 of the License, or (at your option) any later version.
+#
+#    This library is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#    Lesser General Public License for more details.
+#
+#    You should have received a copy of the GNU Lesser General Public
+#    License along with this library; if not, write to the Free Software
+#    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 import argparse
 import hashlib
 import json
@@ -17,9 +35,8 @@ from urllib.parse import urlparse
 import paramiko
 import requests
 import scp
-from vcspm import decompress
-from vcspm import version
-from vcspm.HelpFormatter import HelpFormatter
+import decompress
+import version
 
 VCSPM_DIR = ".vcspm"
 CACHE_DIR_NAME = ".vcspm"
@@ -45,6 +62,19 @@ SHELL_PYTHON = "python"
 
 if not sys.version_info[0] >= 3:
     raise ValueError("本工具需要Python 3.0或更高版本")
+
+
+class HelpFormatter(argparse.HelpFormatter):
+    def _format_action_invocation(self, action: argparse.Action) -> str:
+        formatted = super()._format_action_invocation(action)
+        if action.option_strings and action.nargs != 0:
+            formatted = formatted.replace(
+                f" {self._format_args(action, self._get_default_metavar_for_optional(action))}",
+                "",
+                len(action.option_strings) - 1,
+            )
+
+        return formatted
 
 
 def log_info(string):
@@ -442,6 +472,7 @@ def extract_file_and_filter(filename, package_path, rm_top_dir=False, include=No
 
 
 def download_package_from_local(package, package_path, force=False):
+    name = package['name']
     url = package['info'].get('url', None)
     path = package['info'].get('path', None)
     include = package['info'].get('include', None)
@@ -453,7 +484,8 @@ def download_package_from_local(package, package_path, force=False):
         os.makedirs(package_path)
 
     if path is None:
-        raise
+        err_msg = "本地包 {} 的 path 为空".format(name)
+        raise RuntimeError(err_msg)
 
     copy_tree(path, package_path, include=include, exclude=exclude)
 
@@ -954,6 +986,7 @@ def main(argv=None):
             writeJsonData(vcspm_state, state_filepath)
         except:
             log_error("更新包 {} 失败，(reason: {})".format(name, sys.exc_info()[0]))
+            shutil.rmtree(package_dir, onerror=delete)
             if args.break_on_error:
                 exit(-1)
             traceback.print_exc()
