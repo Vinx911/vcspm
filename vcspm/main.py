@@ -6,9 +6,9 @@ import traceback
 
 import logger
 import version
-import manager
 from logger import logging
 from vcspm import utils
+from vcspm.manager import Manager
 from vcspm.param import Param
 
 if not sys.version_info[0] >= 3:
@@ -125,7 +125,7 @@ def parser_argument(argv=None):
 def main(argv=None):
     args = parser_argument(argv)
 
-    if args.debug is not None:
+    if args.debug is not None and args.debug:
         logging.level = logger.Level.DEBUG
 
     if args.root is not None:
@@ -141,13 +141,12 @@ def main(argv=None):
 
     vcspm_filepath = os.path.abspath(os.path.join(Param.root_dir, Param.vcspm_file))
     state_filepath = os.path.abspath(os.path.join(Param.root_dir, state_filename))
-    patches_dir = os.path.abspath(os.path.join(Param.root_dir, Param.patches_dir))
 
     logging.debug("vcspm_filename = " + vcspm_filepath)
     logging.debug("state_filename = " + state_filepath)
 
     # 读取依赖包文件
-    vcspm = manager.fromJson(vcspm_filepath)
+    vcspm = Manager.fromJson(vcspm_filepath)
     if vcspm is None:
         return -1
 
@@ -174,10 +173,6 @@ def main(argv=None):
         logging.info("创建包安装目录: " + Param.install_path)
         os.makedirs(Param.install_path)
 
-
-    print("BBBBBBBBBBBBB")
-    print(Param.install_path)
-
     # 创建缓存目录
     if not os.path.isdir(Param.cache_dir):
         logging.info("创建缓存目录: " + Param.cache_dir)
@@ -191,10 +186,10 @@ def main(argv=None):
     # 读取状态文件
     vcspm_state = None
     if os.path.exists(state_filepath):
-        vcspm_state = manager.fromJson(state_filepath)
+        vcspm_state = Manager.fromJson(state_filepath)
 
     if vcspm_state is None:
-        vcspm_state = manager.Manager()
+        vcspm_state = Manager()
 
     # 删除已经移除的包状态
     pkg_names = vcspm.package_names()
